@@ -15,6 +15,7 @@ import com.campus.cycle.mapper.MessageMapper;
 import com.campus.cycle.mapper.UserMapper;
 import com.campus.cycle.security.UserContext;
 import com.campus.cycle.service.ChatService;
+import com.campus.cycle.service.SchoolService;
 import com.campus.cycle.vo.ConversationRowVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ public class ChatServiceImpl implements ChatService {
     private final MessageMapper messageMapper;
     private final GoodsMapper goodsMapper;
     private final UserMapper userMapper;
+    private final SchoolService schoolService;
 
     @Override
     public List<ConversationRowVO> conversations() {
@@ -53,7 +55,7 @@ public class ChatServiceImpl implements ChatService {
                     ConversationRowVO vo = new ConversationRowVO();
                     vo.setConversation(c);
                     vo.setGoods(goods);
-                    vo.setPeer(Assemblers.toProfile(peer));
+                    vo.setPeer(Assemblers.toProfile(peer, schoolService.nameOf(peer.getSchoolId())));
                     Map<String, Integer> unreadFor = c.getUnreadFor();
                     vo.setUnread(unreadFor == null ? 0 : unreadFor.getOrDefault(uid, 0));
                     return vo;

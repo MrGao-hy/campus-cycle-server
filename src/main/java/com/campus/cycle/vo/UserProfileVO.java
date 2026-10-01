@@ -13,6 +13,9 @@ public class UserProfileVO {
     private String avatar;
     private String schoolId;
 
+    /** 学校名称（联查填充，方便前端直接展示） */
+    private String schoolName;
+
     /** 信用分 */
     private Integer creditScore;
 

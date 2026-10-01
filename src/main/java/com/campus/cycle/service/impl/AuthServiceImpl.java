@@ -8,6 +8,7 @@ import com.campus.cycle.entity.User;
 import com.campus.cycle.mapper.UserMapper;
 import com.campus.cycle.security.JwtUtil;
 import com.campus.cycle.service.AuthService;
+import com.campus.cycle.service.SchoolService;
 import com.campus.cycle.vo.LoginVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserMapper userMapper;
     private final JwtUtil jwtUtil;
+    private final SchoolService schoolService;
 
     @Value("${campus.wx.appid}")
     private String appid;
@@ -53,7 +55,7 @@ public class AuthServiceImpl implements AuthService {
             user = createDefaultUser(openid);
         }
         String token = jwtUtil.createToken(user.getId());
-        return new LoginVO(token, Assemblers.toProfile(user));
+        return new LoginVO(token, Assemblers.toProfile(user, schoolService.nameOf(user.getSchoolId())));
     }
 
     /** mock 模式 openid：mock_ + jsCode */

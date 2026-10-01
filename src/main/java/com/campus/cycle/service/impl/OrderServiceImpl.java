@@ -21,6 +21,7 @@ import com.campus.cycle.mapper.ReviewMapper;
 import com.campus.cycle.mapper.UserMapper;
 import com.campus.cycle.security.UserContext;
 import com.campus.cycle.service.OrderService;
+import com.campus.cycle.service.SchoolService;
 import com.campus.cycle.vo.OrderRowVO;
 import com.campus.cycle.vo.OrderVO;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +46,7 @@ public class OrderServiceImpl implements OrderService {
     private final UserMapper userMapper;
     private final ReviewMapper reviewMapper;
     private final FeeBillMapper feeBillMapper;
+    private final SchoolService schoolService;
 
     @Override
     public List<OrderRowVO> list(String role, String status) {
@@ -342,8 +344,8 @@ public class OrderServiceImpl implements OrderService {
         }
         row.setOrder(orderVO);
         row.setGoods(goods);
-        row.setBuyer(Assemblers.toProfile(buyer));
-        row.setSeller(Assemblers.toProfile(seller));
+        row.setBuyer(Assemblers.toProfile(buyer, schoolService.nameOf(buyer.getSchoolId())));
+        row.setSeller(Assemblers.toProfile(seller, schoolService.nameOf(seller.getSchoolId())));
         return row;
     }
 

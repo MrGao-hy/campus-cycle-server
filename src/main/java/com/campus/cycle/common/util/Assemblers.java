@@ -16,11 +16,17 @@ public final class Assemblers {
 
     /** User → UserProfileVO（contact 组装为嵌套结构） */
     public static UserProfileVO toProfile(User u) {
+        return toProfile(u, null);
+    }
+
+    /** User → UserProfileVO（带学校名称，schoolName 可为 null） */
+    public static UserProfileVO toProfile(User u, String schoolName) {
         UserProfileVO vo = new UserProfileVO();
         vo.setId(u.getId());
         vo.setNickname(u.getNickname());
         vo.setAvatar(u.getAvatar());
         vo.setSchoolId(u.getSchoolId());
+        vo.setSchoolName(schoolName);
         vo.setCreditScore(u.getCreditScore());
         vo.setSuccessCount(u.getSuccessCount());
         ContactVO contact = new ContactVO();

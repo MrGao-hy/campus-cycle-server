@@ -3,11 +3,14 @@ package com.campus.cycle.controller;
 import com.campus.cycle.common.result.Result;
 import com.campus.cycle.dto.UpdateProfileDTO;
 import com.campus.cycle.service.UserService;
+import com.campus.cycle.vo.UserDetailVO;
 import com.campus.cycle.vo.UserProfileVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,5 +31,11 @@ public class UserController {
     @PostMapping("/profile")
     public Result<UserProfileVO> updateProfile(@Valid @RequestBody UpdateProfileDTO dto) {
         return Result.success(userService.updateProfile(dto));
+    }
+
+    @Operation(summary = "用户主页（资料 + 在售商品 + 收到的评价）")
+    @GetMapping("/detail/{id}")
+    public Result<UserDetailVO> detail(@PathVariable String id) {
+        return Result.success(userService.detail(id));
     }
 }

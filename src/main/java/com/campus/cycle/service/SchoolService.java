@@ -14,4 +14,7 @@ public interface SchoolService {
 
     /** 确认学校（更新当前用户所属学校） */
     School confirm(String schoolId);
+
+    /** 学校名称（查不到返回 null） */
+    String nameOf(String schoolId);
 }

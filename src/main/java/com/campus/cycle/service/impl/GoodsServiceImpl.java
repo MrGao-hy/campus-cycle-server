@@ -22,6 +22,7 @@ import com.campus.cycle.mapper.ReviewMapper;
 import com.campus.cycle.mapper.UserMapper;
 import com.campus.cycle.security.UserContext;
 import com.campus.cycle.service.GoodsService;
+import com.campus.cycle.service.SchoolService;
 import com.campus.cycle.vo.GoodsDetailVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,7 @@ public class GoodsServiceImpl implements GoodsService {
     private final OrderMapper orderMapper;
     private final FeeBillMapper feeBillMapper;
     private final ConversationMapper conversationMapper;
+    private final SchoolService schoolService;
 
     @Override
     public List<Goods> list(String schoolId, String keyword, String category) {
@@ -97,7 +99,7 @@ public class GoodsServiceImpl implements GoodsService {
         vo.setViews(goods.getViews());
         vo.setWantCount(goods.getWantCount());
         vo.setPublishTime(goods.getPublishTime());
-        vo.setSeller(Assemblers.toProfile(seller));
+        vo.setSeller(Assemblers.toProfile(seller, schoolService.nameOf(seller.getSchoolId())));
         vo.setReviews(reviews.stream().map(Assemblers::toReviewVO).toList());
         return vo;
     }

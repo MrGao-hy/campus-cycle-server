@@ -52,4 +52,13 @@ public class SchoolServiceImpl implements SchoolService {
         userMapper.updateById(user);
         return school;
     }
+
+    @Override
+    public String nameOf(String schoolId) {
+        if (!StringUtils.hasText(schoolId)) {
+            return null;
+        }
+        School school = schoolMapper.selectById(schoolId);
+        return school == null ? null : school.getName();
+    }
 }
