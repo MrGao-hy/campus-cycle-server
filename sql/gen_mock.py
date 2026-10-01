@@ -3,8 +3,20 @@
 """生成校园循环扩充版 mock-data.sql（幂等 INSERT IGNORE，时间相对 @now）"""
 import urllib.parse
 
-def img(prompt):
-    return "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=" + urllib.parse.quote(prompt) + "&image_size=square"
+BASE_URL = "http://127.0.0.1:8080/mock-images"
+IMG_MAP = {
+    "图书": "book.jpg",
+    "数码": "laptop.jpg",
+    "交通": "bike.jpg",
+    "乐器": "piano.jpg",
+    "运动": "basketball.jpg",
+    "生活": "hairdryer.jpg",
+    "户外": "chair.jpg",
+}
+
+def img(cat):
+    """按分类返回本地 mock 商品图（detail 复用主图，避免重复请求）"""
+    return "%s/%s" % (BASE_URL, IMG_MAP.get(cat, "book.jpg"))
 
 now = "@now"
 day = "@day"
@@ -276,7 +288,7 @@ A(" deleted, create_time, update_time) VALUES")
 good_rows = []
 for gid, seller, school, title, price, oprice, cat, cond, desc, status, views, want, days in goods:
     oprice_s = "%.2f" % oprice if oprice else "NULL"
-    imgs = '["%s","%s"]' % (img("used " + title + " product photo, clean background"), img(title + " detail shot"))
+    imgs = '["%s","%s"]' % (img(cat), img(cat))
     good_rows.append("('%s', '%s', '%s', '%s', %.2f, %s,\n '%s',\n '%s', '%s', '%s', '%s', %d, %d, @now - %d * @day, 0, @now - %d * @day, @now)"
         % (gid, seller, school, title, price, oprice_s, imgs, cat, cond, desc, status, views, want, days, days))
 A(",\n".join(good_rows))

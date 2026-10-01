@@ -29,6 +29,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
             "/goods/list",
             "/goods/detail/**",
             "/uploads/**",
+            "/mock-images/**",
             "/error",
             "/v3/api-docs/**",
             "/swagger-ui/**",
@@ -48,6 +49,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
         String location = uploadDir.endsWith("/") || uploadDir.endsWith("\\") ? uploadDir : uploadDir + "/";
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:" + location);
+        // mock 数据商品图：/mock-images/xxx.jpg → file:mock-images/xxx.jpg（随仓库提交）
+        registry.addResourceHandler("/mock-images/**")
+                .addResourceLocations("file:" + System.getProperty("user.dir") + "/mock-images/");
     }
 
     @Override
