@@ -64,6 +64,15 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderRowVO detail(String orderId) {
+        // 越权校验：仅订单买卖双方可查看（订单含双方联系方式等敏感信息）
+        String uid = UserContext.requireUserId();
+        Order order = orderMapper.selectById(orderId);
+        if (order == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "订单不存在");
+        }
+        if (!uid.equals(order.getBuyerId()) && !uid.equals(order.getSellerId())) {
+            throw new BusinessException(ResultCode.FORBIDDEN, "无权查看该订单");
+        }
         OrderRowVO row = toRow(orderId);
         if (row == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "订单不存在");

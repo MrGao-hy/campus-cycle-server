@@ -160,6 +160,15 @@ public class GoodsServiceImpl implements GoodsService {
         if (!GoodsStatus.ON_SALE.equals(goods.getStatus())) {
             throw new BusinessException(GoodsStatus.SOLD.equals(goods.getStatus()) ? "商品已售出" : "该商品已有订单进行中");
         }
+        // 商品已有进行中订单（待卖家确认/待线下/待买家确认/申诉期）→ 禁止一物多单
+        Long active = orderMapper.selectCount(Wrappers.<Order>lambdaQuery()
+                .eq(Order::getGoodsId, goods.getId())
+                .in(Order::getStatus,
+                        OrderStatus.PENDING_SELLER, OrderStatus.PENDING_OFFLINE,
+                        OrderStatus.PENDING_BUYER, OrderStatus.APPEALING));
+        if (active > 0) {
+            throw new BusinessException("该商品已有买家申请进行中，暂不可申请");
+        }
         // 同一买家对同一商品仅允许一个待确认申请
         Long pending = orderMapper.selectCount(Wrappers.<Order>lambdaQuery()
                 .eq(Order::getGoodsId, goods.getId())
