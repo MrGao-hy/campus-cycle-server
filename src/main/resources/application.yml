@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: campus-cycle-server
+  profiles:
+    active: dev
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+
+server:
+  port: 8080
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+# 业务自定义配置
+campus:
+  jwt:
+    # 生产环境务必通过环境变量覆盖，勿使用默认值
+    secret: ${CAMPUS_JWT_SECRET:campus-cycle-dev-secret-change-me-please-0123456789}
+    # token 有效期（毫秒）：默认 30 天
+    expire-ms: ${CAMPUS_JWT_EXPIRE_MS:2592000000}
+  wx:
+    # 微信小程序登录（code2session），生产环境配置真实 appid/secret
+    appid: ${WX_APPID:}
+    secret: ${WX_SECRET:}
+    # mock 模式：为 true 时不调微信接口，按 code 直接签发测试 token（本地开发用）
+    mock: ${WX_MOCK:true}
+  scheduler:
+    # 订单超时扫描间隔（毫秒）
+    order-sweep-interval-ms: 60000
+  upload:
+    # 商品图片上传存储目录（相对工作目录；可通过环境变量覆盖）
+    dir: ${CAMPUS_UPLOAD_DIR:./uploads}

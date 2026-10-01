@@ -1,0 +1,30 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# Mac
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# 本地环境变量
+.env
+.env.local
+
+# 运行产物（商品图片上传目录）
+uploads/
