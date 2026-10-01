@@ -28,10 +28,13 @@
 # 1. 建库建表（一次性；含 5 所学校种子数据）
 mysql -uroot -p < sql/schema.sql
 
-# 2. 配置数据库连接（可选，dev 环境默认 devuser/123456）
+# 2. 导入 mock 演示数据（可重复执行，幂等；10 所学校 / 13 用户 / 62 商品 / 20 订单 / 10 评价 / 10 账单 / 10 会话 / 36 消息）
+mysql -udevuser -p123456 < sql/mock-data.sql
+
+# 3. 配置数据库连接（可选，dev 环境默认 devuser/123456）
 export DB_USERNAME=devuser DB_PASSWORD=123456
 
-# 3. 启动服务（开发模式）
+# 4. 启动服务（开发模式）
 mvn spring-boot:run
 
 # 或打包后运行（生产/后台）
