@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +36,7 @@ import java.util.UUID;
 /**
  * 商品接口
  */
+@Slf4j
 @Tag(name = "商品")
 @RestController
 @RequestMapping("/goods")
@@ -53,6 +55,10 @@ public class GoodsController {
     @Operation(summary = "上传商品图片（multipart，返回可访问 URL）")
     @PostMapping("/upload")
     public Result<String> upload(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        log.info("==== upload 请求到达, file={}, size={}, host={} ====",
+                file == null ? null : file.getOriginalFilename(),
+                file == null ? 0 : file.getSize(),
+                request.getHeader("Host"));
         if (file == null || file.isEmpty()) {
             throw new BusinessException("请选择要上传的图片");
         }
