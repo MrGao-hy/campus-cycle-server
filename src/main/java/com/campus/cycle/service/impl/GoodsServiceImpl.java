@@ -60,9 +60,8 @@ public class GoodsServiceImpl implements GoodsService {
             String kw = keyword.trim();
             query.and(w -> w.like(Goods::getTitle, kw).or().like(Goods::getDescription, kw));
         }
-        // 在售优先，再按发布时间倒序（已售出置灰展示、不隐藏）
-        query.orderByAsc(Goods::getStatus)
-                .orderByDesc(Goods::getPublishTime);
+        // 在售优先（LOCKED 置灰中、SOLD 已售出置灰展示均后置），同类按发布时间倒序
+        query.last("ORDER BY CASE status WHEN 'ON_SALE' THEN 0 WHEN 'LOCKED' THEN 1 ELSE 2 END, publish_time DESC");
         return goodsMapper.selectList(query);
     }
 

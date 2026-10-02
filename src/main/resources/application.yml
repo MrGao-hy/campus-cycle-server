@@ -41,9 +41,13 @@ campus:
     expire-ms: ${CAMPUS_JWT_EXPIRE_MS:2592000000}
   wx:
     # 微信小程序登录（code2session），生产环境配置真实 appid/secret
-    appid: ${WX_APPID:}
+    # appid 已填当前小程序 wx1d337ce3ce3bae15；secret 请在微信公众平台
+    # （mp.weixin.qq.com → 开发 → 开发管理 → 开发设置 → AppSecret）获取，
+    # 通过环境变量 WX_SECRET 注入，勿硬编码进配置文件
+    appid: ${WX_APPID:wx1d337ce3ce3bae15}
     secret: ${WX_SECRET:}
-    # mock 模式：为 true 时不调微信接口，按 code 直接签发测试 token（本地开发用）
+    # mock 模式：为 true 时不调微信接口，按 code 直接签发测试 token（本地开发用）；
+    # 配好 AppSecret 后置为 false 走真实 code2session（同一微信账号稳定登录）
     mock: ${WX_MOCK:true}
   scheduler:
     # 订单超时扫描间隔（毫秒）

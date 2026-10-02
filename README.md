@@ -79,17 +79,19 @@ curl -X POST http://127.0.0.1:8080/auth/login \
 1. 前端 `vite.config.ts` 已配置代理：`/api` → `http://localhost:8080`（自动去掉 `/api` 前缀）
 2. 前端请求 `POST /api/auth/login`、`GET /api/goods/list?schoolId=...` 即可直连后端
 3. 前端登录态 key 为 `member_token`，请求拦截器自动放入 `token` header，与后端契约一致
-4. 后端 `WX_MOCK=true`（默认）时前端可传任意 `jsCode` 登录；联调完成接真实微信时，前后端各自切换配置
+4. 后端 `WX_MOCK=true` 时前端可传任意 `jsCode` 登录；已接真实微信（`application-dev.yml` 已配 AppSecret）时前后端均走真实 code2session
 
 ## 微信登录模式
 
 | 模式 | 配置 | 行为 |
 |---|---|---|
-| mock（默认） | `WX_MOCK=true`（或 appid/secret 未配置） | 按 jsCode 直接建号签发 token；前端 H5 固定演示账号 10001（皮蛋同学，含 mock 数据） |
-| 真实微信 | `WX_APPID=xxx WX_SECRET=xxx WX_MOCK=false` | 前端 `uni.login` 取 code → 后端 code2session 换 openid，同一微信账号稳定登录 |
+| 真实微信（当前默认，dev profile） | `application.yml` appid 默认 `wx1d337ce3ce3bae15`；`application-dev.yml` 已配 secret + `mock: false` | 前端 `uni.login` 取 code → 后端 code2session 换 openid，同一微信账号稳定登录 |
+| mock（联调兜底） | `WX_MOCK=true`（或 appid/secret 未配置） | 按 jsCode 直接建号签发 token；前端 H5 固定演示账号 10001（皮蛋同学，含 mock 数据） |
 
-- 前端已按环境自动切换：小程序端走 `uni.login` 真实 code，H5/App 演示环境走 mock
-- 真实模式需在微信公众平台配置小程序后，将 AppID/AppSecret 注入环境变量
+- 前端 `src/config/env.ts` 已按环境切换：小程序 develop/trial/release 均 `wxMock: false`（真实 code），H5/App 演示环境走 mock
+- 切换回 mock：后端设环境变量 `WX_MOCK=true` 重启，前端把 `wxMock` 改回 `true`
+- ⚠️ AppSecret 属敏感凭证：`application-dev.yml` 中的 secret 仅限本地开发；若仓库公开，请在微信公众平台重置 secret，并改用环境变量 `WX_SECRET` 注入
+- 真实模式需在微信公众平台配置小程序（AppID 已填 `wx1d337ce3ce3bae15`）并申请对应接口权限
 
 ## 环境变量
 
@@ -99,8 +101,9 @@ curl -X POST http://127.0.0.1:8080/auth/login \
 | DB_USERNAME / DB_PASSWORD | devuser / 123456 | 数据库账号（dev 默认） |
 | CAMPUS_JWT_SECRET | dev 默认值（仅开发） | JWT 密钥，生产必须覆盖 |
 | CAMPUS_JWT_EXPIRE_MS | 2592000000（30 天） | token 有效期 |
-| WX_APPID / WX_SECRET | 空 | 微信小程序凭证 |
-| WX_MOCK | true | true=跳过微信直接签发测试 token；false=调 code2session |
+| WX_APPID | wx1d337ce3ce3bae15 | 微信小程序 AppID（application.yml 默认） |
+| WX_SECRET | 空（dev profile 已配本地值） | 微信小程序 AppSecret，生产必须环境变量注入 |
+| WX_MOCK | true | true=跳过微信直接签发测试 token；false=调 code2session（dev 默认 false） |
 | SERVER_PORT | 8080 | 服务端口 |
 
 ## 业务规则（与前端 src/types 契约一致）
