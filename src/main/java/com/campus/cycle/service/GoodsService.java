@@ -4,6 +4,7 @@ import com.campus.cycle.dto.ApplyBuyDTO;
 import com.campus.cycle.dto.PublishGoodsDTO;
 import com.campus.cycle.entity.Goods;
 import com.campus.cycle.vo.GoodsDetailVO;
+import com.campus.cycle.vo.PageResult;
 
 import java.util.List;
 
@@ -12,8 +13,8 @@ import java.util.List;
  */
 public interface GoodsService {
 
-    /** 本校商品列表（已售出置灰展示、不隐藏） */
-    List<Goods> list(String schoolId, String keyword, String category);
+    /** 本校商品列表（分页；已售出置灰展示、不隐藏） */
+    PageResult<Goods> list(String schoolId, String keyword, String category, long pageNum, long pageSize);
 
     /** 商品详情（含卖家信息与评价） */
     GoodsDetailVO detail(String id);

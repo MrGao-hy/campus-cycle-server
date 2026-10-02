@@ -1,6 +1,8 @@
 package com.campus.cycle.service.impl;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.cycle.common.constant.GoodsStatus;
 import com.campus.cycle.common.constant.OrderStatus;
 import com.campus.cycle.common.exception.BusinessException;
@@ -24,7 +26,9 @@ import com.campus.cycle.security.UserContext;
 import com.campus.cycle.service.GoodsService;
 import com.campus.cycle.service.SchoolService;
 import com.campus.cycle.vo.GoodsDetailVO;
+import com.campus.cycle.vo.PageResult;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -41,6 +45,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class GoodsServiceImpl implements GoodsService {
 
+    /** 单页条数上限，防止前端传超大 pageSize 拖垮查询 */
+    private static final long MAX_PAGE_SIZE = 100;
+
+    /** 默认每页条数（campus.goods.page-size 在 Nacos 中维护，热更新生效） */
+    @Value("${campus.goods.page-size:20}")
+    private long defaultPageSize;
+
     private final GoodsMapper goodsMapper;
     private final UserMapper userMapper;
     private final ReviewMapper reviewMapper;
@@ -50,7 +61,11 @@ public class GoodsServiceImpl implements GoodsService {
     private final SchoolService schoolService;
 
     @Override
-    public List<Goods> list(String schoolId, String keyword, String category) {
+    public PageResult<Goods> list(String schoolId, String keyword, String category, long pageNum, long pageSize) {
+        // 分页参数兜底：非法值回落到默认每页条数（campus.goods.page-size，可在 Nacos 调整）
+        long size = pageSize > 0 ? Math.min(pageSize, MAX_PAGE_SIZE) : defaultPageSize;
+        long current = pageNum > 0 ? pageNum : 1;
+
         var query = Wrappers.<Goods>lambdaQuery()
                 .eq(Goods::getSchoolId, schoolId);
         if (StringUtils.hasText(category) && !"推荐".equals(category)) {
@@ -62,7 +77,10 @@ public class GoodsServiceImpl implements GoodsService {
         }
         // 在售优先（LOCKED 置灰中、SOLD 已售出置灰展示均后置），同类按发布时间倒序
         query.last("ORDER BY CASE status WHEN 'ON_SALE' THEN 0 WHEN 'LOCKED' THEN 1 ELSE 2 END, publish_time DESC");
-        return goodsMapper.selectList(query);
+
+        Page<Goods> page = new Page<>(current, size);
+        IPage<Goods> result = goodsMapper.selectPage(page, query);
+        return PageResult.of(result.getRecords(), result.getTotal(), result.getCurrent(), result.getSize());
     }
 
     @Override

@@ -1,0 +1,28 @@
+# 校园循环后端 · 公共配置
+# dataId : campus-cycle-server.yaml
+# group  : CAMPUS_CYCLE
+# 说明   : 所有环境共享的配置；环境差异项放 campus-cycle-server-{dev|prod}.yaml
+#          Nacos 中修改后自动推送，@Value 字段需配合 @RefreshScope 才会重新注入
+
+campus:
+  jwt:
+    # 生产环境务必在 Nacos 中覆盖为独立密钥（≥32 字节），勿沿用默认值
+    secret: ${CAMPUS_JWT_SECRET:campus-cycle-dev-secret-change-me-please-0123456789}
+    # token 有效期（毫秒）：默认 30 天
+    expire-ms: ${CAMPUS_JWT_EXPIRE_MS:2592000000}
+  wx:
+    # 微信小程序 AppID
+    appid: ${WX_APPID:wx1d337ce3ce3bae15}
+    # AppSecret 属敏感凭证：dev/prod 配置里各自维护，公共配置只留空占位
+    secret: ${WX_SECRET:}
+    # true=跳过微信按 jsCode 直接建号；false=走真实 code2session
+    mock: ${WX_MOCK:true}
+  scheduler:
+    # 订单超时扫描间隔（毫秒）
+    order-sweep-interval-ms: 60000
+  upload:
+    # 商品图片上传存储目录
+    dir: ${CAMPUS_UPLOAD_DIR:./uploads}
+  goods:
+    # 商品列表默认分页大小（前端首页分页加载用）
+    page-size: 20

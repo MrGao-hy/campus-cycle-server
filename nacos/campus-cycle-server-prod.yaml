@@ -1,0 +1,22 @@
+# 校园循环后端 · 生产环境配置（模板）
+# dataId : campus-cycle-server-prod.yaml
+# group  : CAMPUS_CYCLE
+# 说明   : 发布前请替换下面标记为 <CHANGE_ME> 的项，切勿沿用占位值
+
+spring:
+  datasource:
+    url: jdbc:mysql://<CHANGE_ME>:3306/campus_cycle?useUnicode=true&characterEncoding=UTF-8&useSSL=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: <CHANGE_ME>
+    password: <CHANGE_ME>
+
+logging:
+  level:
+    com.campus.cycle: info
+
+campus:
+  jwt:
+    # 生产必须覆盖：≥32 字节的独立密钥
+    secret: <CHANGE_ME>
+  wx:
+    secret: <CHANGE_ME>
+    mock: false

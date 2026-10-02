@@ -8,6 +8,7 @@ import com.campus.cycle.dto.PublishGoodsDTO;
 import com.campus.cycle.entity.Goods;
 import com.campus.cycle.service.GoodsService;
 import com.campus.cycle.vo.GoodsDetailVO;
+import com.campus.cycle.vo.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -89,12 +90,15 @@ public class GoodsController {
         return Result.success(url);
     }
 
-    @Operation(summary = "本校商品列表（已售出置灰展示、不隐藏）")
+    @Operation(summary = "本校商品列表（分页；已售出置灰展示、不隐藏）")
     @GetMapping("/list")
-    public Result<List<Goods>> list(@RequestParam String schoolId,
-                                    @RequestParam(required = false) String keyword,
-                                    @RequestParam(required = false) String category) {
-        return Result.success(goodsService.list(schoolId, keyword, category));
+    public Result<PageResult<Goods>> list(@RequestParam String schoolId,
+                                          @RequestParam(required = false) String keyword,
+                                          @RequestParam(required = false) String category,
+                                          @RequestParam(required = false, defaultValue = "1") long pageNum,
+                                          @RequestParam(required = false, defaultValue = "0") long pageSize) {
+        // pageSize 传 0/缺省时使用 Nacos 中的 campus.goods.page-size
+        return Result.success(goodsService.list(schoolId, keyword, category, pageNum, pageSize));
     }
 
     @Operation(summary = "商品详情（含卖家信息与评价）")

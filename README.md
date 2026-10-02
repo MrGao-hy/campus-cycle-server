@@ -14,6 +14,40 @@
 | API 文档 | springdoc-openapi 2.8.9（Swagger UI） |
 | 构建 | Maven 3.9+ |
 
+## Nacos 配置中心
+
+配置已托管到 Nacos（`nacos/` 目录下为配置源文件 + 一键发布脚本）：
+
+| dataId | 说明 | 内容 |
+|---|---|---|
+| `campus-cycle-server.yaml` | 公共（所有环境） | JWT 密钥/有效期、微信 appid、调度间隔、上传目录、**商品分页大小** |
+| `campus-cycle-server-dev.yaml` | 开发环境 | 数据源（devuser/123456）、日志级别、微信 AppSecret、`mock: false` |
+| `campus-cycle-server-prod.yaml` | 生产模板 | `<CHANGE_ME>` 占位，发布前替换 |
+
+- 分组：`CAMPUS_CYCLE`；命名空间：默认 public（可用 `NACOS_NAMESPACE` 覆盖）
+- **优先级**：Nacos 配置 > 本地 `application-{profile}.yml` > `application.yml`
+- **兜底**：`spring.config.import` 带 `optional:` 前缀，Nacos 没起也能直接用本地配置启动，不会启动失败
+- **动态刷新**：`refresh-enabled: true`，Nacos 改配置即时推送；`@Value` 字段所在 Bean 需加 `@RefreshScope`（如 `AuthServiceImpl`）
+
+### 一键发布配置到 Nacos
+
+```bash
+cd ~/nacos && ./start.sh                 # 1. 先启动 Nacos（服务端 8848 / 控制台 18080）
+./nacos/publish.sh dev                   # 2. 发布公共 + dev 配置
+# ./nacos/publish.sh prod                #    生产环境
+```
+
+可用环境变量：`NACOS_SERVER_ADDR`（默认 `127.0.0.1:8848`）、`NACOS_USERNAME/PASSWORD`（默认 `nacos/nacos`）、`NACOS_GROUP`、`NACOS_NAMESPACE`。
+
+### 常用可调项（改 Nacos 即可生效，无需重启）
+
+| 配置项 | 默认 | 说明 |
+|---|---|---|
+| `campus.goods.page-size` | 20 | 首页商品列表每页条数 |
+| `campus.scheduler.order-sweep-interval-ms` | 60000 | 订单超时扫描间隔（重启生效） |
+| `campus.wx.mock` | dev=false | 切回 mock 登录 |
+| `campus.upload.dir` | `./uploads` | 图片上传目录 |
+
 ## 快速启动
 
 ### 前置条件
@@ -21,6 +55,7 @@
 - JDK 21（`java -version` 确认）
 - Maven 3.9+（`mvn -version`）
 - MySQL 8.x 本机运行中（默认 `127.0.0.1:3306`）
+- Nacos 3.x 运行（可选，不启动时走本地 `application*.yml` 兜底）
 
 ### 步骤
 
@@ -61,7 +96,7 @@ curl -X POST http://127.0.0.1:8080/auth/login \
 
 启动后浏览器打开：**http://127.0.0.1:8080/swagger-ui.html**
 
-- 25 个接口全部可视化，可直接在页面内调试（输入参数 → 发送 → 看响应）
+- 28 个接口全部可视化，可直接在页面内调试（输入参数 → 发送 → 看响应）
 - 每个接口带中文说明、请求/响应结构
 - 调试需登录的接口：先调 `/auth/login` 拿 token，点击右上角 **Authorize** 填入 `token`（不带 Bearer 前缀），后续请求自动携带
 - 前端也可直接拉取 `http://127.0.0.1:8080/v3/api-docs` 生成 TS 类型或客户端代码
@@ -103,8 +138,12 @@ curl -X POST http://127.0.0.1:8080/auth/login \
 | CAMPUS_JWT_EXPIRE_MS | 2592000000（30 天） | token 有效期 |
 | WX_APPID | wx1d337ce3ce3bae15 | 微信小程序 AppID（application.yml 默认） |
 | WX_SECRET | 空（dev profile 已配本地值） | 微信小程序 AppSecret，生产必须环境变量注入 |
-| WX_MOCK | true | true=跳过微信直接签发测试 token；false=调 code2session（dev 默认 false） |
+| WX_MOCK | true（application.yml 兜底） | dev Nacos 配置为 `${WX_MOCK:false}`；H5 演示想跳过微信时启动服务带上 `WX_MOCK=true` |
 | SERVER_PORT | 8080 | 服务端口 |
+| NACOS_SERVER_ADDR | 127.0.0.1:8848 | Nacos 地址 |
+| NACOS_USERNAME / NACOS_PASSWORD | nacos / nacos | Nacos 账号 |
+| NACOS_GROUP | CAMPUS_CYCLE | 配置分组 |
+| NACOS_NAMESPACE | 空（public） | 配置命名空间 |
 
 ## 业务规则（与前端 src/types 契约一致）
 

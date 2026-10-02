@@ -1,4 +1,8 @@
 spring:
+  # 生产环境专属 Nacos 配置（数据源 / 微信 / 日志），优先级高于本地同名字段
+  config:
+    import:
+      - optional:nacos:campus-cycle-server-prod.yaml
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME:campus_cycle}?useUnicode=true&characterEncoding=UTF-8&useSSL=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true

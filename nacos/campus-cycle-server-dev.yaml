@@ -1,0 +1,21 @@
+# 校园循环后端 · 开发环境配置
+# dataId : campus-cycle-server-dev.yaml
+# group  : CAMPUS_CYCLE
+
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/campus_cycle?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: devuser
+    password: 123456
+
+logging:
+  level:
+    com.campus.cycle: debug
+
+campus:
+  wx:
+    # 本地开发用 AppSecret（仅限本机；仓库公开请在微信公众平台重置）
+    secret: c375c0d21fe3532bfa25965dbab70e9c
+    # dev 默认走真实 code2session（同一微信账号稳定登录）；
+    # H5/演示环境启动服务时加 WX_MOCK=true 即可临时切回 mock 登录
+    mock: ${WX_MOCK:false}

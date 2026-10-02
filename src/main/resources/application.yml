@@ -3,6 +3,26 @@ spring:
     name: campus-cycle-server
   profiles:
     active: dev
+  # Nacos 配置中心：optional: 前缀表示 Nacos 不可用时静默跳过，本地 yml 兜底，
+  # 保证无 Nacos 环境（CI / 新机器）也能直接启动
+  config:
+    import:
+      - optional:nacos:campus-cycle-server.yaml
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
+      config:
+        # public 命名空间的 id 为空字符串，留空即 public
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:CAMPUS_CYCLE}
+        file-extension: yaml
+        # 配置变更推送后自动刷新（@Value 字段需配合 @RefreshScope）
+        refresh-enabled: true
+      # 单体服务暂不做注册发现，接入配置中心即可
+      discovery:
+        enabled: false
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai

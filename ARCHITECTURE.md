@@ -50,6 +50,14 @@
 │  │ MySQL（campus_cycle 库，8 张表）                │  │
 │  └───────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
+        │ 配置托管（spring.config.import: optional:nacos:）
+┌───────▼─────────────────────────────────────────────┐
+│ Nacos 配置中心 :8848（group CAMPUS_CYCLE）           │
+│ campus-cycle-server.yaml     公共（JWT/微信/分页…）  │
+│ campus-cycle-server-dev.yaml 开发环境（数据源/secret）│
+│ campus-cycle-server-prod.yaml 生产模板              │
+│ optional: 前缀 → Nacos 不可用时本地 yml 兜底启动     │
+└─────────────────────────────────────────────────────┘
 ```
 
 **统一响应**：`Result<T> { code, message, data }`
@@ -91,9 +99,14 @@ src/main/java/com/campus/cycle/
 ├── dto/                          # 请求体（含参数校验注解）
 └── vo/                           # 响应体（对齐前端契约）
 src/main/resources/
-├── application.yml               # 公共配置（JWT/微信/调度）
+├── application.yml               # 公共配置（Nacos 地址 + 本地兜底值）
 ├── application-dev.yml           # 开发环境（本机 devuser/123456）
 └── application-prod.yml          # 生产环境（环境变量注入）
+nacos/                            # Nacos 配置源文件 + 一键发布脚本
+├── campus-cycle-server.yaml      # 公共配置
+├── campus-cycle-server-dev.yaml  # 开发环境配置
+├── campus-cycle-server-prod.yaml # 生产配置模板
+└── publish.sh                    # 发布到 Nacos（v3 Admin API）
 sql/schema.sql                    # 建库建表 + 学校种子数据
 ```
 
@@ -162,7 +175,7 @@ PENDING_SELLER(待卖家确认) ──卖家确认──▶ PENDING_OFFLINE(待�
 - 拦截器从 header `token` 解析 userId，写入 `UserContext`（ThreadLocal，请求结束清理防串号）
 - 白名单：`/auth/**`、`/school/list`、`/error`、`/v3/api-docs/**`、`/swagger-ui/**`
 
-## 7. 接口清单（25 个，Swagger 可交互调试）
+## 7. 接口清单（28 个，Swagger 可交互调试）
 
 ### 认证
 | 方法 | 路径 | 说明 |
@@ -178,12 +191,13 @@ PENDING_SELLER(待卖家确认) ──卖家确认──▶ PENDING_OFFLINE(待�
 ### 商品
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | /goods/list | 本校商品（schoolId + category + keyword，已售出置灰不隐藏） |
+| GET | /goods/list | 本校商品（schoolId + category + keyword + pageNum/pageSize，返回 `PageResult`，已售出置灰不隐藏） |
 | GET | /goods/detail/{id} | 商品详情（含卖家信息与评价） |
 | GET | /goods/mine | 我发布的商品 |
 | POST | /goods/publish | 发布商品（未结清手续费时禁止） |
 | POST | /goods/apply | 买家提交购买申请（创建待确认订单） |
 | POST | /goods/conversation/start | 发起站内沟通（复用或新建会话） |
+| POST | /goods/upload | 商品图片上传（multipart，落盘 `campus.upload.dir`，返回可访问 URL） |
 
 ### 订单
 | 方法 | 路径 | 说明 |
@@ -213,6 +227,12 @@ PENDING_SELLER(待卖家确认) ──卖家确认──▶ PENDING_OFFLINE(待�
 | POST | /fee/pay | 支付手续费 |
 | GET | /fee/check-publish | 是否可发布（allowed + unpaidAmount） |
 
+### 用户
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | /user/profile | 更新个人资料（微信授权头像/昵称、联系方式） |
+| GET | /user/detail/{id} | 用户主页（资料 + 在售商品 + 收到的评价） |
+
 > 除白名单外全部接口需请求头 `token: <jwt>`，响应 401 时前端应跳登录。
 
 ## 8. 配置与部署
@@ -235,7 +255,11 @@ PENDING_SELLER(待卖家确认) ──卖家确认──▶ PENDING_OFFLINE(待�
 # 1. 建库建表（一次性）
 mysql -uroot -p < sql/schema.sql
 
-# 2. 启动（dev 环境默认连接本机 devuser/123456）
+# 2. 发布配置到 Nacos（可选，不发布则走本地 application*.yml 兜底）
+cd ~/nacos && ./start.sh          # 起 Nacos：服务端 8848 / 控制台 18080
+./nacos/publish.sh dev
+
+# 3. 启动（dev 环境默认连接本机 devuser/123456）
 mvn spring-boot:run
 # 或打包后运行
 mvn package -DskipTests
