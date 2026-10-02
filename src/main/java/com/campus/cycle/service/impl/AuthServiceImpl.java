@@ -10,6 +10,7 @@ import com.campus.cycle.security.JwtUtil;
 import com.campus.cycle.service.AuthService;
 import com.campus.cycle.service.SchoolService;
 import com.campus.cycle.vo.LoginVO;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserMapper userMapper;
     private final JwtUtil jwtUtil;
     private final SchoolService schoolService;
+    private final ObjectMapper objectMapper;
 
     @Value("${campus.wx.appid}")
     private String appid;
@@ -67,14 +69,27 @@ public class AuthServiceImpl implements AuthService {
     private String wxCode2Session(String jsCode) {
         if (!appid.isBlank() && !secret.isBlank()) {
             RestClient restClient = RestClient.builder().build();
-            Map<?, ?> resp = restClient.get()
+            // 微信 code2session 接口响应 Content-Type 为 text/plain，
+            // Jackson 转换器只认 application/json，直接 body(Map.class) 会抛
+            // UnknownContentTypeException → 按 String 接收后手动解析 JSON
+            String respBody = restClient.get()
                     .uri("https://api.weixin.qq.com/sns/jscode2session?appid={appid}&secret={secret}&js_code={jsCode}&grant_type=authorization_code",
                             appid, secret, jsCode)
                     .retrieve()
-                    .body(Map.class);
-            if (resp != null && resp.get("errcode") != null && ((Number) resp.get("errcode")).intValue() != 0) {
-                log.error("微信 code2session 失败: {}", resp);
+                    .body(String.class);
+            Map<?, ?> resp;
+            try {
+                resp = objectMapper.readValue(respBody, Map.class);
+            } catch (Exception e) {
+                log.error("微信 code2session 响应解析失败: {}", respBody, e);
                 throw new BusinessException("微信登录失败，请重试");
+            }
+            if (resp != null && resp.get("errcode") != null) {
+                int errcode = ((Number) resp.get("errcode")).intValue();
+                if (errcode != 0) {
+                    log.error("微信 code2session 失败: {}", resp);
+                    throw new BusinessException("微信登录失败，请重试");
+                }
             }
             Object openid = resp != null ? resp.get("openid") : null;
             if (openid == null) {
