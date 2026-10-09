@@ -61,13 +61,24 @@ public class GoodsServiceImpl implements GoodsService {
     private final SchoolService schoolService;
 
     @Override
-    public PageResult<Goods> list(String schoolId, String keyword, String category, long pageNum, long pageSize) {
+    public PageResult<Goods> list(String keyword, String category, long pageNum, long pageSize) {
+        // 商品列表依赖登录用户绑定的学校：schoolId 不传，从登录态取（登录/建号时已绑定）
+        String userId = UserContext.requireUserId();
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        if (!StringUtils.hasText(user.getSchoolId())) {
+            throw new BusinessException("请先选择学校");
+        }
         // 分页参数兜底：非法值回落到默认每页条数（campus.goods.page-size，可在 Nacos 调整）
         long size = pageSize > 0 ? Math.min(pageSize, MAX_PAGE_SIZE) : defaultPageSize;
         long current = pageNum > 0 ? pageNum : 1;
 
         var query = Wrappers.<Goods>lambdaQuery()
-                .eq(Goods::getSchoolId, schoolId);
+                .eq(Goods::getSchoolId, user.getSchoolId())
+                // 卖家已下架的商品买家不可见
+                .ne(Goods::getStatus, GoodsStatus.OFF_SHELF);
         if (StringUtils.hasText(category) && !"推荐".equals(category)) {
             query.eq(Goods::getCategory, category);
         }
@@ -242,5 +253,51 @@ public class GoodsServiceImpl implements GoodsService {
         conversation.setUnreadFor(new HashMap<>());
         conversationMapper.insert(conversation);
         return conversation.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void offShelf(String goodsId) {
+        Goods goods = requireMine(goodsId);
+        if (!GoodsStatus.ON_SALE.equals(goods.getStatus())) {
+            throw new BusinessException("仅「在售」商品可下架");
+        }
+        goods.setStatus(GoodsStatus.OFF_SHELF);
+        goodsMapper.updateById(goods);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void onShelf(String goodsId) {
+        Goods goods = requireMine(goodsId);
+        if (!GoodsStatus.OFF_SHELF.equals(goods.getStatus())) {
+            throw new BusinessException("仅「已下架」商品可重新上架");
+        }
+        goods.setStatus(GoodsStatus.ON_SALE);
+        goodsMapper.updateById(goods);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(String goodsId) {
+        Goods goods = requireMine(goodsId);
+        if (GoodsStatus.LOCKED.equals(goods.getStatus()) || GoodsStatus.SOLD.equals(goods.getStatus())) {
+            throw new BusinessException("交易中/已售出的商品不可删除");
+        }
+        // @TableLogic 逻辑删除（deleted=1），列表/详情查询自动过滤
+        goodsMapper.deleteById(goodsId);
+    }
+
+    /** 查询商品并校验归属当前登录用户（卖家本人操作前置校验） */
+    private Goods requireMine(String goodsId) {
+        String sellerId = UserContext.requireUserId();
+        Goods goods = goodsMapper.selectById(goodsId);
+        if (goods == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "商品不存在或已删除");
+        }
+        if (!sellerId.equals(goods.getSellerId())) {
+            throw new BusinessException("只能操作自己发布的商品");
+        }
+        return goods;
     }
 }

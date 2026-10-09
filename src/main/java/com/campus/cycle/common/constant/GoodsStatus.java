@@ -16,4 +16,7 @@ public final class GoodsStatus {
 
     /** 已售出 */
     public static final String SOLD = "SOLD";
+
+    /** 已下架（卖家手动下架，买家不可见，可重新上架） */
+    public static final String OFF_SHELF = "OFF_SHELF";
 }

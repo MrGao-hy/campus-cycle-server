@@ -4,6 +4,7 @@ import com.campus.cycle.common.exception.BusinessException;
 import com.campus.cycle.common.result.Result;
 import com.campus.cycle.common.result.ResultCode;
 import com.campus.cycle.dto.ApplyBuyDTO;
+import com.campus.cycle.dto.GoodsIdDTO;
 import com.campus.cycle.dto.PublishGoodsDTO;
 import com.campus.cycle.entity.Goods;
 import com.campus.cycle.service.GoodsService;
@@ -90,15 +91,14 @@ public class GoodsController {
         return Result.success(url);
     }
 
-    @Operation(summary = "本校商品列表（分页；已售出置灰展示、不隐藏）")
+    @Operation(summary = "本校商品列表（分页；schoolId 不传，从登录用户绑定学校取；已售出置灰展示、不隐藏）")
     @GetMapping("/list")
-    public Result<PageResult<Goods>> list(@RequestParam String schoolId,
-                                          @RequestParam(required = false) String keyword,
+    public Result<PageResult<Goods>> list(@RequestParam(required = false) String keyword,
                                           @RequestParam(required = false) String category,
                                           @RequestParam(required = false, defaultValue = "1") long pageNum,
                                           @RequestParam(required = false, defaultValue = "0") long pageSize) {
         // pageSize 传 0/缺省时使用 Nacos 中的 campus.goods.page-size
-        return Result.success(goodsService.list(schoolId, keyword, category, pageNum, pageSize));
+        return Result.success(goodsService.list(keyword, category, pageNum, pageSize));
     }
 
     @Operation(summary = "商品详情（含卖家信息与评价）")
@@ -129,5 +129,26 @@ public class GoodsController {
     @PostMapping("/conversation/start")
     public Result<String> startConversation(@RequestBody ApplyBuyDTO dto) {
         return Result.success(goodsService.startConversation(dto.getGoodsId()));
+    }
+
+    @Operation(summary = "卖家下架商品（仅自己在售商品可下架，下架后买家不可见）")
+    @PostMapping("/off-shelf")
+    public Result<Void> offShelf(@Valid @RequestBody GoodsIdDTO dto) {
+        goodsService.offShelf(dto.getGoodsId());
+        return Result.success();
+    }
+
+    @Operation(summary = "卖家重新上架（已下架商品恢复在售）")
+    @PostMapping("/on-shelf")
+    public Result<Void> onShelf(@Valid @RequestBody GoodsIdDTO dto) {
+        goodsService.onShelf(dto.getGoodsId());
+        return Result.success();
+    }
+
+    @Operation(summary = "卖家删除商品（未售出的商品才可删除，逻辑删除）")
+    @PostMapping("/delete")
+    public Result<Void> delete(@Valid @RequestBody GoodsIdDTO dto) {
+        goodsService.delete(dto.getGoodsId());
+        return Result.success();
     }
 }

@@ -22,11 +22,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Value("${campus.upload.dir:./uploads}")
     private String uploadDir;
 
-    /** 无需登录即可访问的路径（商品浏览公开，申请/会话等操作需登录） */
+    /**
+     * 无需登录即可访问的路径。
+     * 注意：/goods/list 需要登录（列表按登录用户绑定的学校维度返回，
+     * schoolId 不传、从 token 取），故不在白名单中；商品详情/图片浏览保持公开。
+     */
     private static final String[] WHITE_LIST = {
             "/auth/**",
             "/school/list",
-            "/goods/list",
             "/goods/detail/**",
             "/uploads/**",
             "/mock-images/**",
