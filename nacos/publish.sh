@@ -15,10 +15,12 @@
 
 set -e
 
+# 必须是服务端端口 8848（Nacos 3.x 控制台是 8080，两者不是一回事）
 NACOS_SERVER_ADDR="${NACOS_SERVER_ADDR:-127.0.0.1:8848}"
 NACOS_USERNAME="${NACOS_USERNAME:-nacos}"
 NACOS_PASSWORD="${NACOS_PASSWORD:-nacos}"
-NACOS_NAMESPACE="${NACOS_NAMESPACE:-}"
+# 显式用 public；与客户端 namespace 留空等价（留空即 public）
+NACOS_NAMESPACE="${NACOS_NAMESPACE:-public}"
 NACOS_GROUP="${NACOS_GROUP:-CAMPUS_CYCLE}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -33,15 +35,12 @@ esac
 BASE="http://${NACOS_SERVER_ADDR}/nacos"
 echo "目标 Nacos: ${BASE}  命名空间:[${NACOS_NAMESPACE:-public}]  分组:${NACOS_GROUP}"
 
-# 1. 登录换取 accessToken（Nacos 3.x 默认开启鉴权）
+# 1. 登录换取 accessToken（Nacos 3.x 控制台默认开启鉴权）
 LOGIN=$(curl -s -X POST "${BASE}/v1/auth/users/login" \
     --data-urlencode "username=${NACOS_USERNAME}" \
     --data-urlencode "password=${NACOS_PASSWORD}")
-TOKEN=$(printf '%s' "$LOGIN" | /usr/bin/python3 -c 'import sys,json
-try:
-    print(json.load(sys.stdin).get("accessToken",""))
-except Exception:
-    print("")')
+# 用 sed 抽取 accessToken：不依赖 python，Git Bash / Linux / macOS 都能跑
+TOKEN=$(printf '%s' "$LOGIN" | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
 if [ -z "$TOKEN" ]; then
     echo "登录失败，请检查 Nacos 地址与账号密码：$LOGIN"
     exit 1
@@ -54,14 +53,17 @@ publish() {
         echo "跳过（文件不存在）：$file"
         return
     fi
-    local resp
+    local resp content
+    # 先把文件读进变量再发送：Git Bash 下是 Windows 版 curl，
+    # 不认 `content@/e/xxx/yyy.yaml` 这种 POSIX 路径（会报 reading a file 错）
+    content=$(cat "$file")
     resp=$(curl -s -X POST "${BASE}/v3/admin/cs/config" \
         --data-urlencode "dataId=${data_id}" \
         --data-urlencode "groupName=${NACOS_GROUP}" \
         --data-urlencode "namespaceId=${NACOS_NAMESPACE}" \
         --data-urlencode "type=yaml" \
         --data-urlencode "accessToken=${TOKEN}" \
-        --data-urlencode "content@${file}")
+        --data-urlencode "content=${content}")
     echo "发布 ${data_id} → ${resp}"
 }
 
@@ -101,4 +103,7 @@ all)
     ;;
 esac
 
-echo "完成。控制台查看：http://${NACOS_SERVER_ADDR%:*}:18080/nacos"
+CONSOLE_HOST="${NACOS_SERVER_ADDR%:*}"
+echo "完成。控制台（Nacos 3.x 新 UI）：http://${CONSOLE_HOST}:8080/next/"
+echo "  监听查询：http://${CONSOLE_HOST}:8080/next/#/listeningToQuery?namespace=public&namespaceShowName=public"
+echo "  配置列表：http://${CONSOLE_HOST}:8080/next/#/config/list?namespace=public&group=${NACOS_GROUP}"

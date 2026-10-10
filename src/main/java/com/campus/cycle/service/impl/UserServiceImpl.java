@@ -49,6 +49,18 @@ public class UserServiceImpl implements UserService {
         if (dto.getAvatar() != null && !dto.getAvatar().isBlank()) {
             user.setAvatar(dto.getAvatar().trim());
         }
+        if (dto.getContactPhone() != null) {
+            user.setContactPhone(dto.getContactPhone().trim());
+        }
+        if (dto.getContactQq() != null) {
+            user.setContactQq(dto.getContactQq().trim());
+        }
+        if (dto.getContactWechat() != null) {
+            user.setContactWechat(dto.getContactWechat().trim());
+        }
+        if (dto.getContactEmail() != null) {
+            user.setContactEmail(dto.getContactEmail().trim());
+        }
         userMapper.updateById(user);
         return Assemblers.toProfile(user, schoolService.nameOf(user.getSchoolId()));
     }

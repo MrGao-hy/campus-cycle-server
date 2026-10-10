@@ -8,8 +8,8 @@ import lombok.Data;
 @Data
 public class ContactVO {
 
-    private String phone;
-    private String qq;
-    private String wechat;
-    private String email;
+    private String contactPhone;
+    private String contactQq;
+    private String contactWechat;
+    private String contactEmail;
 }

@@ -27,26 +27,39 @@
 - 分组：`CAMPUS_CYCLE`；命名空间：默认 public（可用 `NACOS_NAMESPACE` 覆盖）
 - **优先级**：Nacos 配置 > 本地 `application-{profile}.yml` > `application.yml`
 - **兜底**：`spring.config.import` 带 `optional:` 前缀，Nacos 没起也能直接用本地配置启动，不会启动失败
-- **动态刷新**：`refresh-enabled: true`，Nacos 改配置即时推送；`@Value` 字段所在 Bean 需加 `@RefreshScope`（如 `AuthServiceImpl`）
+- **动态刷新**：`refresh-enabled: true`，Nacos 改配置即时推送；`@Value` 字段所在 Bean 需加 `@RefreshScope`（已加：`AuthServiceImpl`、`GoodsServiceImpl`）
+
+> ⚠️ **Nacos 3.x 端口别填错**
+>
+> | 用途 | 端口 | 说明 |
+> |---|---|---|
+> | 服务端（SDK 连接用） | **8848** | HTTP + gRPC，`spring.cloud.nacos.server-addr` 必须填这个 |
+> | gRPC 长连接 | 9848 / 9849 | 由客户端自动推导（8848+1000），无需配置 |
+> | 控制台 UI | 8080 | 访问路径是 `/next/`，`/next/#/listeningToQuery` 即「监听查询」 |
+>
+> 把 `server-addr` 填成 8080（控制台）是常见坑：gRPC 会去连 9080 而连不上，
+> 又因为 `optional:` 前缀会**静默退回本地配置**，表现为「控制台监听查询里看不到本应用」。
 
 ### 一键发布配置到 Nacos
 
 ```bash
-cd ~/nacos && ./start.sh                 # 1. 先启动 Nacos（服务端 8848 / 控制台 18080）
+cd "D:/tools/nacos/bin" && ./startup.cmd -m standalone   # 1. 先启动 Nacos（服务端 8848 / 控制台 8080）
 ./nacos/publish.sh dev                   # 2. 发布公共 + dev 配置
 # ./nacos/publish.sh prod                #    生产环境
 ```
 
+发布完成后在控制台核对：`http://127.0.0.1:9000/next/#/config/list?namespace=public&group=CAMPUS_CYCLE`
+
 可用环境变量：`NACOS_SERVER_ADDR`（默认 `127.0.0.1:8848`）、`NACOS_USERNAME/PASSWORD`（默认 `nacos/nacos`）、`NACOS_GROUP`、`NACOS_NAMESPACE`。
 
-### 常用可调项（改 Nacos 即可生效，无需重启）
+### 常用可调项
 
-| 配置项 | 默认 | 说明 |
-|---|---|---|
-| `campus.goods.page-size` | 20 | 首页商品列表每页条数 |
-| `campus.scheduler.order-sweep-interval-ms` | 60000 | 订单超时扫描间隔（重启生效） |
-| `campus.wx.mock` | dev=false | 切回 mock 登录 |
-| `campus.upload.dir` | `./uploads` | 图片上传目录 |
+| 配置项 | 默认 | 说明 | 生效方式 |
+|---|---|---|---|
+| `campus.goods.page-size` | 20 | 首页商品列表每页条数 | Nacos 改完即时热更新 |
+| `campus.wx.mock` | dev=false | 切回 mock 登录 | Nacos 改完即时热更新 |
+| `campus.scheduler.order-sweep-interval-ms` | 60000 | 订单超时扫描间隔 | 重启生效（定时任务启动时读取） |
+| `campus.upload.dir` | `./uploads` | 图片上传目录 | 重启生效（静态资源映射启动时注册） |
 
 ## 快速启动
 
@@ -77,16 +90,16 @@ mvn package -DskipTests
 java -jar target/campus-cycle-server-0.0.1-SNAPSHOT.jar
 ```
 
-启动成功看到 `Started CampusCycleApplication`，监听 `http://127.0.0.1:8080`。
+启动成功看到 `Started CampusCycleApplication`，监听 `http://127.0.0.1:9000`。
 
 ### 验证
 
 ```bash
 # OpenAPI JSON（列出全部接口定义）
-curl http://127.0.0.1:8080/v3/api-docs
+curl http://127.0.0.1:9000/v3/api-docs
 
 # 登录拿 token（mock 模式，无需真实微信）
-curl -X POST http://127.0.0.1:8080/auth/login \
+curl -X POST http://127.0.0.1:9000/auth/login \
   -H "Content-Type: application/json" \
   -d '{"jsCode":"test-001"}'
 # → {"code":200,"data":{"token":"...","userInfo":{...}}}
@@ -94,12 +107,12 @@ curl -X POST http://127.0.0.1:8080/auth/login \
 
 ## Swagger 接口文档（前端接入首选）
 
-启动后浏览器打开：**http://127.0.0.1:8080/swagger-ui.html**
+启动后浏览器打开：**http://127.0.0.1:9000/swagger-ui.html**
 
 - 28 个接口全部可视化，可直接在页面内调试（输入参数 → 发送 → 看响应）
 - 每个接口带中文说明、请求/响应结构
 - 调试需登录的接口：先调 `/auth/login` 拿 token，点击右上角 **Authorize** 填入 `token`（不带 Bearer 前缀），后续请求自动携带
-- 前端也可直接拉取 `http://127.0.0.1:8080/v3/api-docs` 生成 TS 类型或客户端代码
+- 前端也可直接拉取 `http://127.0.0.1:9000/v3/api-docs` 生成 TS 类型或客户端代码
 
 ## 接口约定
 
@@ -111,7 +124,9 @@ curl -X POST http://127.0.0.1:8080/auth/login \
 
 ## 前端联调（campus-cycle）
 
-1. 前端 `vite.config.ts` 已配置代理：`/api` → `http://localhost:8080`（自动去掉 `/api` 前缀）
+1. 后端服务端口为 **9000**（`application.yml` 的 `server.port`；**8080 已被 Nacos 控制台占用**）
+   - 前端 H5：`vite.config.ts` 代理 `/api` → `http://localhost:9000`（自动去掉 `/api` 前缀）
+   - 前端小程序/App：`src/config/env.ts` 各环境 `baseUrl` 需指向 `http://127.0.0.1:9000`
 2. 前端请求 `POST /api/auth/login`、`GET /api/goods/list?schoolId=...` 即可直连后端
 3. 前端登录态 key 为 `member_token`，请求拦截器自动放入 `token` header，与后端契约一致
 4. 后端 `WX_MOCK=true` 时前端可传任意 `jsCode` 登录；已接真实微信（`application-dev.yml` 已配 AppSecret）时前后端均走真实 code2session
@@ -139,7 +154,7 @@ curl -X POST http://127.0.0.1:8080/auth/login \
 | WX_APPID | wx1d337ce3ce3bae15 | 微信小程序 AppID（application.yml 默认） |
 | WX_SECRET | 空（dev profile 已配本地值） | 微信小程序 AppSecret，生产必须环境变量注入 |
 | WX_MOCK | true（application.yml 兜底） | dev Nacos 配置为 `${WX_MOCK:false}`；H5 演示想跳过微信时启动服务带上 `WX_MOCK=true` |
-| SERVER_PORT | 8080 | 服务端口 |
+| SERVER_PORT | 9000 | 服务端口（8080 已留给 Nacos 控制台） |
 | NACOS_SERVER_ADDR | 127.0.0.1:8848 | Nacos 地址 |
 | NACOS_USERNAME / NACOS_PASSWORD | nacos / nacos | Nacos 账号 |
 | NACOS_GROUP | CAMPUS_CYCLE | 配置分组 |
@@ -188,4 +203,5 @@ sql/schema.sql                    # 建库建表 + 学校种子数据
 | `Unsupported character encoding 'utf8mb4'` | JDBC URL 用 `characterEncoding=UTF-8`（Connector/J 9.x 不认 utf8mb4） |
 | `condition` 字段 SQL 报错 | `condition` 是 MySQL 保留字，实体已 `@TableField("\`condition\`")` 转义 |
 | 登录 401 | 请求头缺 `token` 或已过期，重新调 `/auth/login` |
-| 8080 端口被占用 | `lsof -iTCP:8080` 查占用进程，或 `SERVER_PORT` 换端口 |
+| 9000 端口被占用 | `lsof -iTCP:9000` 查占用进程，或 `SERVER_PORT` 换端口 |
+| Nacos 控制台看不到本应用 | `server-addr` 填成了 8080（控制台）而非 8848（服务端）；改回 8848 后重启 |

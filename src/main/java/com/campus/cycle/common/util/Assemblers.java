@@ -30,10 +30,10 @@ public final class Assemblers {
         vo.setCreditScore(u.getCreditScore());
         vo.setSuccessCount(u.getSuccessCount());
         ContactVO contact = new ContactVO();
-        contact.setPhone(u.getContactPhone());
-        contact.setQq(u.getContactQq());
-        contact.setWechat(u.getContactWechat());
-        contact.setEmail(u.getContactEmail());
+        contact.setContactPhone(u.getContactPhone());
+        contact.setContactQq(u.getContactQq());
+        contact.setContactWechat(u.getContactWechat());
+        contact.setContactEmail(u.getContactEmail());
         vo.setContact(contact);
         return vo;
     }

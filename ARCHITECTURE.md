@@ -31,7 +31,7 @@
 └──────────────────────┬──────────────────────────────┘
                        │ HTTP + header: token
 ┌──────────────────────▼──────────────────────────────┐
-│                 campus-cycle-server :8080            │
+│                 campus-cycle-server :9000            │
 │  ┌───────────────────────────────────────────────┐  │
 │  │ Controller 层（auth/school/goods/order/chat/fee）│  │
 │  └──────────────────────┬────────────────────────┘  │
@@ -52,7 +52,9 @@
 └─────────────────────────────────────────────────────┘
         │ 配置托管（spring.config.import: optional:nacos:）
 ┌───────▼─────────────────────────────────────────────┐
-│ Nacos 配置中心 :8848（group CAMPUS_CYCLE）           │
+│ Nacos 3.x（group CAMPUS_CYCLE / 命名空间 public）     │
+│ 服务端 :8848（SDK 连这个）+ gRPC :9848               │
+│ 控制台 :8080，UI 路径 /next/（监听查询 / 配置列表）   │
 │ campus-cycle-server.yaml     公共（JWT/微信/分页…）  │
 │ campus-cycle-server-dev.yaml 开发环境（数据源/secret）│
 │ campus-cycle-server-prod.yaml 生产模板              │
@@ -247,7 +249,7 @@ PENDING_SELLER(待卖家确认) ──卖家确认──▶ PENDING_OFFLINE(待�
 | CAMPUS_JWT_EXPIRE_MS | 2592000000（30 天） | token 有效期 |
 | WX_APPID / WX_SECRET | 空 | 微信小程序凭证 |
 | WX_MOCK | true | 登录 mock 开关 |
-| SERVER_PORT | 8080 | 服务端口 |
+| SERVER_PORT | 9000 | 服务端口（8080 已被 Nacos 控制台占用） |
 
 ### 8.2 启动
 
@@ -256,7 +258,7 @@ PENDING_SELLER(待卖家确认) ──卖家确认──▶ PENDING_OFFLINE(待�
 mysql -uroot -p < sql/schema.sql
 
 # 2. 发布配置到 Nacos（可选，不发布则走本地 application*.yml 兜底）
-cd ~/nacos && ./start.sh          # 起 Nacos：服务端 8848 / 控制台 18080
+cd "D:/tools/nacos/bin" && ./startup.cmd -m standalone   # 起 Nacos：服务端 8848 / 控制台 8080(/next/)
 ./nacos/publish.sh dev
 
 # 3. 启动（dev 环境默认连接本机 devuser/123456）
@@ -266,12 +268,12 @@ mvn package -DskipTests
 java -jar target/campus-cycle-server-0.0.1-SNAPSHOT.jar
 
 # 3. 验证
-curl http://127.0.0.1:8080/v3/api-docs   # OpenAPI JSON
+curl http://127.0.0.1:9000/v3/api-docs   # OpenAPI JSON
 ```
 
 ### 8.3 前端联调
 
-- 前端 vite 已配置 `/api` 代理 → `http://localhost:8080`，前端请求 `/api/auth/login` 等即可
+- 后端跑在 **9000**（8080 已被 Nacos 控制台占用）；前端 `vite.config.ts` 的 `/api` 代理与 `src/config/env.ts` 的 `baseUrl` 都需指向 `http://localhost:9000`，前端请求 `/api/auth/login` 等即可
 - 登录响应 `data.token` 存入本地（前端 key：`member_token`），后续请求自动带 `token` header
 
 ## 9. 后续规划（待开发）

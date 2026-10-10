@@ -10,6 +10,11 @@ spring:
       - optional:nacos:campus-cycle-server.yaml
   cloud:
     nacos:
+      # 注意：这里必须填【服务端端口 8848】，不是控制台端口 8080。
+      # Nacos 3.x 把控制台从主服务里拆了出去：控制台监听 8080（新 UI 路径 /next/），
+      # 而 SDK 走的 HTTP + gRPC（gRPC = 8848+1000 = 9848）都在 8848 上，
+      # 填 8080 会连不上（gRPC 会去连 9080），`optional:` 前缀又会把错误吞掉，
+      # 表现为「静默退回本地配置」——控制台「监听查询」里看不到本应用。
       server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
@@ -32,7 +37,7 @@ spring:
       max-request-size: 20MB
 
 server:
-  port: 8080
+  port: 9000
 
 mybatis-plus:
   configuration:

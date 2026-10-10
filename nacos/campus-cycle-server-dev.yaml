@@ -4,9 +4,12 @@
 
 spring:
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/campus_cycle?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: devuser
-    password: 123456
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:campus_cycle}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    # 本机 MySQL 只有 root 账号（无 devuser），且 Nacos 配置优先级高于本地
+    # application-dev.yml，所以这里的默认值必须与本地实际可用账号一致，
+    # 否则会把本地配置覆盖成连不上的账号。可用环境变量 DB_USERNAME/DB_PASSWORD 覆盖。
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:gxh151}
 
 logging:
   level:
