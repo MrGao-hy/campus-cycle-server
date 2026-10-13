@@ -1,6 +1,7 @@
 package com.campus.cycle.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.campus.cycle.common.constant.CreditRules;
 import com.campus.cycle.common.exception.BusinessException;
 import com.campus.cycle.common.util.Assemblers;
 import com.campus.cycle.dto.LoginDTO;
@@ -111,7 +112,7 @@ public class AuthServiceImpl implements AuthService {
         user.setOpenid(openid);
         user.setNickname("同学" + (1000 + ThreadLocalRandom.current().nextInt(9000)));
         user.setSchoolId(DEFAULT_SCHOOL_ID);
-        user.setCreditScore(100);
+        user.setCreditScore(CreditRules.INITIAL_SCORE);
         user.setSuccessCount(0);
         user.setStatus(1);
         userMapper.insert(user);

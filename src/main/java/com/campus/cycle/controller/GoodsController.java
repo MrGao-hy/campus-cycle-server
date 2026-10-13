@@ -1,13 +1,12 @@
 package com.campus.cycle.controller;
 
-import com.campus.cycle.common.exception.BusinessException;
 import com.campus.cycle.common.result.Result;
-import com.campus.cycle.common.result.ResultCode;
 import com.campus.cycle.dto.ApplyBuyDTO;
 import com.campus.cycle.dto.GoodsIdDTO;
 import com.campus.cycle.dto.PublishGoodsDTO;
 import com.campus.cycle.entity.Goods;
 import com.campus.cycle.service.GoodsService;
+import com.campus.cycle.service.UploadService;
 import com.campus.cycle.vo.GoodsDetailVO;
 import com.campus.cycle.vo.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,7 +14,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,14 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.io.File;
-import java.io.IOException;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.UUID;
 
 /**
  * 商品接口
@@ -46,13 +37,7 @@ import java.util.UUID;
 public class GoodsController {
 
     private final GoodsService goodsService;
-
-    /** 允许的图片类型 */
-    private static final Set<String> ALLOWED_TYPES = Set.of("jpg", "jpeg", "png", "webp", "gif");
-
-    /** 上传目录（application.yml: campus.upload.dir） */
-    @Value("${campus.upload.dir:./uploads}")
-    private String uploadDir;
+    private final UploadService uploadService;
 
     @Operation(summary = "上传商品图片（multipart，返回可访问 URL）")
     @PostMapping("/upload")
@@ -61,34 +46,7 @@ public class GoodsController {
                 file == null ? null : file.getOriginalFilename(),
                 file == null ? 0 : file.getSize(),
                 request.getHeader("Host"));
-        if (file == null || file.isEmpty()) {
-            throw new BusinessException("请选择要上传的图片");
-        }
-        String ext = "";
-        String original = file.getOriginalFilename();
-        if (original != null && original.contains(".")) {
-            ext = original.substring(original.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
-        }
-        if (!ALLOWED_TYPES.contains(ext)) {
-            throw new BusinessException("仅支持 jpg/png/webp/gif 图片");
-        }
-        // 按日期分目录，避免单目录文件过多
-        String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        File dir = new File(uploadDir, datePath);
-        if (!dir.exists() && !dir.mkdirs()) {
-            throw new BusinessException("上传目录创建失败");
-        }
-        String filename = UUID.randomUUID().toString().replace("-", "") + "." + ext;
-        File dest = new File(dir, filename);
-        try {
-            file.transferTo(dest);
-        } catch (IOException e) {
-            throw new BusinessException("图片保存失败，请重试");
-        }
-        // 基于请求 Host 动态拼 URL：H5/开发者工具/真机预览均可直接访问
-        String host = request.getHeader("Host");
-        String url = (host != null ? "http://" + host : "") + "/uploads/" + datePath + "/" + filename;
-        return Result.success(url);
+        return Result.success(uploadService.saveImage(file, request));
     }
 
     @Operation(summary = "本校商品列表（分页；schoolId 不传，从登录用户绑定学校取；已售出置灰展示、不隐藏）")

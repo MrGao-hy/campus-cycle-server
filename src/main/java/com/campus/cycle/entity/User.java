@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 /**
  * 用户
  */
@@ -48,6 +50,12 @@ public class User {
     /** 联系方式-邮箱 */
     private String contactEmail;
 
+    /** 角色 USER-普通用户 ADMIN-管理员（后台审核） */
+    private String role;
+
+    /** 校园认证 0-未认证 1-已认证（审核通过时冗余更新） */
+    private Integer certified;
+
     /** 状态 1-正常 0-禁用 */
     private Integer status;
 
@@ -55,8 +63,8 @@ public class User {
     private Integer deleted;
 
     @TableField(fill = FieldFill.INSERT)
-    private Long createTime;
+    private LocalDateTime createTime;
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    private Long updateTime;
+    private LocalDateTime updateTime;
 }

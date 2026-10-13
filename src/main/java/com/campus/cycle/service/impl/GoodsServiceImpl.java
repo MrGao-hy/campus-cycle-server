@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.cycle.common.constant.GoodsStatus;
 import com.campus.cycle.common.constant.OrderStatus;
+import com.campus.cycle.common.constant.UserStatus;
 import com.campus.cycle.common.exception.BusinessException;
 import com.campus.cycle.common.result.ResultCode;
 import com.campus.cycle.common.util.Assemblers;
@@ -144,6 +145,8 @@ public class GoodsServiceImpl implements GoodsService {
     @Transactional(rollbackFor = Exception.class)
     public Goods publish(PublishGoodsDTO dto) {
         String sellerId = UserContext.requireUserId();
+        // 账号禁用（发布违规内容被举报）校验优先于手续费校验
+        User user = requireActiveUser(sellerId, "发布");
         // 有未结清手续费时禁止发布
         List<FeeBill> unpaid = feeBillMapper.selectList(Wrappers.<FeeBill>lambdaQuery()
                 .eq(FeeBill::getSellerId, sellerId)
@@ -155,10 +158,6 @@ public class GoodsServiceImpl implements GoodsService {
             throw new BusinessException("您有未结清手续费 " + unpaidAmount + " 元，结清前暂不能发布新商品");
         }
 
-        User user = userMapper.selectById(sellerId);
-        if (user == null) {
-            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
-        }
         Goods goods = new Goods();
         goods.setSellerId(sellerId);
         goods.setSchoolId(user.getSchoolId());
@@ -180,6 +179,8 @@ public class GoodsServiceImpl implements GoodsService {
     @Transactional(rollbackFor = Exception.class)
     public String applyBuy(ApplyBuyDTO dto) {
         String buyerId = UserContext.requireUserId();
+        // 账号禁用（发布违规内容被举报）→ 禁止「我想要」
+        requireActiveUser(buyerId, "想要");
         Goods goods = goodsMapper.selectById(dto.getGoodsId());
         if (goods == null) {
             throw new BusinessException("商品不存在");
@@ -299,5 +300,17 @@ public class GoodsServiceImpl implements GoodsService {
             throw new BusinessException("只能操作自己发布的商品");
         }
         return goods;
+    }
+
+    /** 查询用户并校验未被禁用（禁用用户禁止发布商品/我想要） */
+    private User requireActiveUser(String userId, String action) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        if (!Integer.valueOf(UserStatus.ACTIVE).equals(user.getStatus())) {
+            throw new BusinessException("因发布违规内容被其他用户举报，已暂停您的" + action + "功能，如误判请提交申诉说明");
+        }
+        return user;
     }
 }

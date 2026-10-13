@@ -15,7 +15,7 @@ public interface UserService {
     UserProfileVO updateProfile(UpdateProfileDTO dto);
 
     /**
-     * 用户主页（资料 + 在售商品 + 收到的评价）
+     * 用户主页（资料 + 在售/已售商品 + 收到的评价）
      *
      * @param userId 目标用户 id
      */

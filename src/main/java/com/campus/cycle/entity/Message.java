@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 /**
  * 聊天消息
  */
@@ -34,8 +36,8 @@ public class Message {
     private Integer deleted;
 
     @TableField(fill = FieldFill.INSERT)
-    private Long createTime;
+    private LocalDateTime createTime;
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    private Long updateTime;
+    private LocalDateTime updateTime;
 }

@@ -9,6 +9,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 import java.util.Map;
 
 /**
@@ -44,8 +46,8 @@ public class Conversation {
     private Integer deleted;
 
     @TableField(fill = FieldFill.INSERT)
-    private Long createTime;
+    private LocalDateTime createTime;
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    private Long updateTime;
+    private LocalDateTime updateTime;
 }

@@ -1,6 +1,7 @@
 package com.campus.cycle.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.campus.cycle.common.constant.CreditRules;
 import com.campus.cycle.common.constant.FeeRules;
 import com.campus.cycle.common.constant.GoodsStatus;
 import com.campus.cycle.common.constant.OrderStatus;
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -251,7 +253,7 @@ public class OrderServiceImpl implements OrderService {
         return count;
     }
 
-    /** 订单最终完成：商品置灰（不隐藏）、生成手续费账单 */
+    /** 订单最终完成：商品置灰（不隐藏）、生成手续费账单、成交双方信用分 +5 */
     private void completeOrder(Order order) {
         long ts = System.currentTimeMillis();
         order.setStatus(OrderStatus.COMPLETED);
@@ -271,12 +273,26 @@ public class OrderServiceImpl implements OrderService {
                 boolean isFirst = seller.getSuccessCount() == null || seller.getSuccessCount() == 0;
                 FeeBill bill = computeFee(order, goods, seller, isFirst);
                 seller.setSuccessCount((seller.getSuccessCount() == null ? 0 : seller.getSuccessCount()) + 1);
+                // 成交一次信用分 +5（封顶 100）
+                seller.setCreditScore(nextCredit(seller));
                 userMapper.updateById(seller);
                 feeBillMapper.insert(bill);
                 order.setFeeBilled(true);
             }
+            // 买家成交一次信用分同样 +5（封顶 100）
+            User buyer = userMapper.selectById(order.getBuyerId());
+            if (buyer != null) {
+                buyer.setCreditScore(nextCredit(buyer));
+                userMapper.updateById(buyer);
+            }
         }
         orderMapper.updateById(order);
+    }
+
+    /** 成交后信用分：+5 分，封顶 100 */
+    private int nextCredit(User user) {
+        int current = user.getCreditScore() == null ? CreditRules.INITIAL_SCORE : user.getCreditScore();
+        return Math.min(current + CreditRules.DEAL_REWARD, CreditRules.MAX_SCORE);
     }
 
     /** 手续费计算：首单免费，成交价 6%，最低 1 元，最高 20 元 */
@@ -300,7 +316,7 @@ public class OrderServiceImpl implements OrderService {
         bill.setAmount(amount);
         bill.setFreeReason(freeReason);
         bill.setStatus(amount.compareTo(BigDecimal.ZERO) == 0 ? FeeRules.STATUS_PAID : FeeRules.STATUS_UNPAID);
-        bill.setCreateTime(ts);
+        bill.setCreateTime(LocalDateTime.now());
         if (amount.compareTo(BigDecimal.ZERO) == 0) {
             bill.setPayTime(ts);
         }

@@ -33,7 +33,7 @@ public class UserController {
         return Result.success(userService.updateProfile(dto));
     }
 
-    @Operation(summary = "用户主页（资料 + 在售商品 + 收到的评价）")
+    @Operation(summary = "用户主页（资料 + 在售/已售商品 + 收到的评价）")
     @GetMapping("/detail/{id}")
     public Result<UserDetailVO> detail(@PathVariable String id) {
         return Result.success(userService.detail(id));

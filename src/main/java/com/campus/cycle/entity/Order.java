@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 import java.math.BigDecimal;
 
 /**
@@ -73,8 +75,8 @@ public class Order {
     private Integer deleted;
 
     @TableField(fill = FieldFill.INSERT)
-    private Long createTime;
+    private LocalDateTime createTime;
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    private Long updateTime;
+    private LocalDateTime updateTime;
 }

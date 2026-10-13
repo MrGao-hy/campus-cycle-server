@@ -71,15 +71,23 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
-        // 在售/锁定商品（供对方继续浏览，已售出不展示）
+        // 在售/锁定/已售出商品（已售置灰展示不隐藏，排序与商品列表一致：在售优先）
         List<Goods> onSaleGoods = goodsMapper.selectList(Wrappers.<Goods>lambdaQuery()
                 .eq(Goods::getSellerId, userId)
-                .in(Goods::getStatus, GoodsStatus.ON_SALE, GoodsStatus.LOCKED)
-                .orderByDesc(Goods::getPublishTime));
-        // 收到的评价 = 该用户作为卖家发布的商品收到的评价
-        List<Review> reviews = reviewMapper.selectList(Wrappers.<Review>lambdaQuery()
-                .in(Review::getGoodsId, onSaleGoods.stream().map(Goods::getId).toList())
-                .orderByDesc(Review::getTime));
+                .in(Goods::getStatus, GoodsStatus.ON_SALE, GoodsStatus.LOCKED, GoodsStatus.SOLD)
+                .last("ORDER BY CASE status WHEN 'ON_SALE' THEN 0 WHEN 'LOCKED' THEN 1 ELSE 2 END, publish_time DESC"));
+        // 收到的评价 = 该卖家全部商品（含已售出）收到的评价。
+        // 只有 COMPLETED 订单才能评价，而订单完成时商品已置 SOLD，
+        // 评价基本都挂在已售出商品上，不能只查在售商品（否则评价永远为空）
+        List<String> goodsIds = goodsMapper.selectList(Wrappers.<Goods>lambdaQuery()
+                        .select(Goods::getId)
+                        .eq(Goods::getSellerId, userId))
+                .stream().map(Goods::getId).toList();
+        List<Review> reviews = goodsIds.isEmpty()
+                ? List.of()
+                : reviewMapper.selectList(Wrappers.<Review>lambdaQuery()
+                        .in(Review::getGoodsId, goodsIds)
+                        .orderByDesc(Review::getTime));
 
         UserDetailVO vo = new UserDetailVO();
         vo.setProfile(Assemblers.toProfile(user, schoolService.nameOf(user.getSchoolId())));

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""生成校园循环扩充版 mock-data.sql（幂等 INSERT IGNORE，时间相对 @now）"""
+"""生成校园循环扩充版 mock-data.sql（幂等 INSERT IGNORE；业务时间相对 @now(ms)，create/update 时间相对 @now_dt）"""
 import urllib.parse
 
 BASE_URL = "http://127.0.0.1:8080/mock-images"
@@ -324,6 +324,7 @@ A("USE campus_cycle;")
 A("")
 A("SET @now = UNIX_TIMESTAMP(NOW(3)) * 1000;")
 A("SET @day = 24 * 60 * 60 * 1000;")
+A("SET @now_dt = NOW(3);")
 A("")
 
 # 学校补充（schema.sql 已有 5 所武汉高校，这里补到 10 所，含南京高校）
@@ -338,7 +339,7 @@ schools = [
     ("s_0009", "南京师范大学", "南师大"),
     ("s_0010", "河海大学", "河海"),
 ]
-A(",\n".join("('%s', '%s', '%s', 0, 0, @now - 30 * @day, @now)" % s for s in schools))
+A(",\n".join("('%s', '%s', '%s', 0, 0, @now_dt - INTERVAL 30 DAY, @now_dt)" % s for s in schools))
 A(";")
 A("")
 
@@ -353,7 +354,7 @@ A(" status, deleted, create_time, update_time) VALUES")
 user_rows = []
 for uid, oid, nick, sch, credit, succ, phone, qq, wx, email, days in users:
     oid_s = "'%s'" % oid if oid else "NULL"
-    user_rows.append("('%s', %s, '%s', NULL, '%s', %d, %d,\n '%s', '%s', '%s', '%s', 1, 0, @now - %d * @day, @now)"
+    user_rows.append("('%s', %s, '%s', NULL, '%s', %d, %d,\n '%s', '%s', '%s', '%s', 1, 0, @now_dt - INTERVAL %d DAY, @now_dt)"
         % (uid, oid_s, nick, sch, credit, succ, phone, qq, wx, email, days))
 A(",\n".join(user_rows))
 A(";")
@@ -371,7 +372,7 @@ good_rows = []
 for gid, seller, school, title, price, oprice, cat, cond, desc, status, views, want, days in goods:
     oprice_s = "%.2f" % oprice if oprice else "NULL"
     imgs = '["%s","%s"]' % (img(cat), img(cat))
-    good_rows.append("('%s', '%s', '%s', '%s', %.2f, %s,\n '%s',\n '%s', '%s', '%s', '%s', %d, %d, @now - %d * @day, 0, @now - %d * @day, @now)"
+    good_rows.append("('%s', '%s', '%s', '%s', %.2f, %s,\n '%s',\n '%s', '%s', '%s', '%s', %d, %d, @now - %d * @day, 0, @now_dt - INTERVAL %d DAY, @now_dt)"
         % (gid, seller, school, title, price, oprice_s, imgs, cat, cond, desc, status, views, want, days, days))
 A(",\n".join(good_rows))
 A(";")
@@ -389,6 +390,7 @@ A(" complete_time, fee_billed, remark, deleted, create_time, update_time) VALUES
 order_rows = []
 for oid, gid, buyer, seller, status, price, apply_d, expire_off, seller_h, buyer_h, obj, cancel_d, reason, comp_d, fee, remark in orders:
     apply = "@now - %d * @day" % apply_d if apply_d > 0 else "@now - 5 * 3600000"
+    apply_dt = "@now_dt - INTERVAL %d DAY" % apply_d if apply_d > 0 else "@now_dt - INTERVAL 5 HOUR"
     expire = "@now + %d * 3600000" % expire_off if expire_off > 0 else "@now - %d * @day - %d * 3600000" % (-expire_off // 24, -expire_off % 24) if expire_off < 0 else "@now"
     if expire_off > 0:
         expire = "@now + %d * 3600000" % expire_off
@@ -420,8 +422,8 @@ for oid, gid, buyer, seller, status, price, apply_d, expire_off, seller_h, buyer
     reason_s = "'%s'" % reason if reason else "NULL"
     comp = "@now - %d * @day" % comp_d if comp_d else "NULL"
     remark_s = "'%s'" % remark if remark else "NULL"
-    order_rows.append("('%s', '%s', '%s', '%s', '%s', %.2f,\n %s, %s, %s, %s,\n %s, %d, %s, %s,\n %s, %d, %s, 0, %s, @now)"
-        % (oid, gid, buyer, seller, status, price, apply, expire, seller_c, buyer_c, appeal, obj, cancel_t, reason_s, comp, fee, remark_s, apply))
+    order_rows.append("('%s', '%s', '%s', '%s', '%s', %.2f,\n %s, %s, %s, %s,\n %s, %d, %s, %s,\n %s, %d, %s, 0, %s, @now_dt)"
+        % (oid, gid, buyer, seller, status, price, apply, expire, seller_c, buyer_c, appeal, obj, cancel_t, reason_s, comp, fee, remark_s, apply_dt))
 A(",\n".join(order_rows))
 A(";")
 A("")
@@ -434,7 +436,7 @@ A("INSERT IGNORE INTO t_review")
 A("(id, goods_id, order_id, from_user_id, from_nickname, rate, content, time, deleted, create_time, update_time) VALUES")
 rev_rows = []
 for rid, gid, oid, from_uid, nick, rate, content in reviews:
-    rev_rows.append("('%s', '%s', '%s', '%s', '%s', %d, '%s', @now - %d * @day, 0, @now, @now)"
+    rev_rows.append("('%s', '%s', '%s', '%s', '%s', %d, '%s', @now - %d * @day, 0, @now_dt, @now_dt)"
         % (rid, gid, oid, from_uid, nick, rate, content, 5))
 A(",\n".join(rev_rows))
 A(";")
@@ -468,7 +470,7 @@ for fid, oid, seller, title, deal, status, paid_h in bills:
     pay = "NULL"
     if status == "PAID":
         pay = "@now - 4 * @day + %d * 3600000" % paid_h
-    bill_rows.append("('%s', '%s', '%s', '%s', %.2f, 0.06, %.2f, %s, '%s',\n @now - 5 * @day, %s, 0, @now)"
+    bill_rows.append("('%s', '%s', '%s', '%s', %.2f, 0.06, %.2f, %s, '%s',\n @now_dt - INTERVAL 5 DAY, %s, 0, @now_dt)"
         % (fid, oid, seller, title, deal, amount, free, status, pay))
 A(",\n".join(bill_rows))
 A(";")
@@ -484,7 +486,7 @@ A(" deleted, create_time, update_time) VALUES")
 conv_rows = []
 for cid, gid, buyer, seller, last, min_ago, unread, days in convs:
     import json
-    conv_rows.append("('%s', '%s', '%s', '%s', '%s', @now - %d * 60000,\n '%s', 0, @now - %d * @day, @now)"
+    conv_rows.append("('%s', '%s', '%s', '%s', '%s', @now - %d * 60000,\n '%s', 0, @now_dt - INTERVAL %d DAY, @now_dt)"
         % (cid, gid, buyer, seller, last, -min_ago, json.dumps(unread, ensure_ascii=False), days))
 A(",\n".join(conv_rows))
 A(";")
@@ -502,10 +504,12 @@ for mid, cid, from_uid, content, when in messages:
         d = int(when[1:when.index("h")])
         h = int(when[when.index("h") + 1:])
         t = "@now - %d * @day + %d * 3600000" % (d, h)
+        t_dt = "@now_dt - INTERVAL %d DAY + INTERVAL %d HOUR" % (d, h)
     else:
         m = int(when[1:])
         t = "@now - %d * 60000" % m
-    msg_rows.append("('%s', '%s', '%s', '%s', %s, 0, %s, @now)" % (mid, cid, from_uid, content, t, t))
+        t_dt = "@now_dt - INTERVAL %d MINUTE" % m
+    msg_rows.append("('%s', '%s', '%s', '%s', %s, 0, %s, @now_dt)" % (mid, cid, from_uid, content, t, t_dt))
 A(",\n".join(msg_rows))
 A(";")
 A("")

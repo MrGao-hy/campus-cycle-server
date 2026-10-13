@@ -252,7 +252,7 @@ def main():
     for i, (name, short) in enumerate(SCHOOLS, start=1001):
         short_name = short or derive_short(name)
         rows.append(
-            f"('s_{i}', '{name}', '{short_name}', 0, 0, 0, 0)"
+            f"('s_{i}', '{name}', '{short_name}', 0, 0, NOW(3), NOW(3))"
         )
     lines.append(",\n".join(rows) + ";")
     lines.append("")

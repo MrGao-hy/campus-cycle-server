@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 import java.math.BigDecimal;
 
 /**
@@ -44,8 +46,8 @@ public class FeeBill {
     /** 状态 UNPAID / PAID */
     private String status;
 
-    /** 账单生成时间(ms) */
-    private Long createTime;
+    /** 账单生成时间 */
+    private LocalDateTime createTime;
 
     /** 支付时间(ms) */
     private Long payTime;
@@ -54,5 +56,5 @@ public class FeeBill {
     private Integer deleted;
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    private Long updateTime;
+    private LocalDateTime updateTime;
 }

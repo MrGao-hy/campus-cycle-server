@@ -1,6 +1,6 @@
 # 校园循环后端架构说明
 
-> 版本：v0.1.0 ｜ 更新时间：2026-10-01
+> 版本：v0.2.0 ｜ 更新时间：2026-10-13
 > 对应前端仓库：`campus-cycle`（UniApp + Vue3 + TypeScript）
 
 ## 1. 项目概述
@@ -33,7 +33,7 @@
 ┌──────────────────────▼──────────────────────────────┐
 │                 campus-cycle-server :9000            │
 │  ┌───────────────────────────────────────────────┐  │
-│  │ Controller 层（auth/school/goods/order/chat/fee）│  │
+│  │ Controller层（auth/school/goods/order/chat/cert）│  │
 │  └──────────────────────┬────────────────────────┘  │
 │  ┌──────────────────────▼────────────────────────┐  │
 │  │ Security 层：AuthInterceptor → UserContext     │  │
@@ -47,7 +47,7 @@
 │  │ Mapper 层（MyBatis-Plus）+ Entity + DTO/VO     │  │
 │  └──────────────────────┬────────────────────────┘  │
 │  ┌──────────────────────▼────────────────────────┐  │
-│  │ MySQL（campus_cycle 库，8 张表）                │  │
+│  │  MySQL（campus_cycle 库，9 张表）                │  │
 │  └───────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
         │ 配置托管（spring.config.import: optional:nacos:）
@@ -94,10 +94,10 @@ src/main/java/com/campus/cycle/
 │   ├── JwtUtil.java              # 签发/解析 token
 │   ├── AuthInterceptor.java      # header token 拦截
 │   └── UserContext.java          # ThreadLocal 当前用户
-├── controller/                   # 6 个 REST 控制器
+├── controller/                   # 7 个 REST 控制器
 ├── service/ + service/impl/      # 接口 + 实现（订单状态机核心）
-├── mapper/                       # 8 个 MyBatis-Plus Mapper
-├── entity/                       # 8 张表实体
+├── mapper/                       # 9 个 MyBatis-Plus Mapper
+├── entity/                       # 9 张表实体
 ├── dto/                          # 请求体（含参数校验注解）
 └── vo/                           # 响应体（对齐前端契约）
 src/main/resources/
@@ -112,20 +112,23 @@ nacos/                            # Nacos 配置源文件 + 一键发布脚本
 sql/schema.sql                    # 建库建表 + 学校种子数据
 ```
 
-## 5. 数据库设计（8 张表）
+## 5. 数据库设计（9 张表）
 
 | 表 | 说明 | 关键字段 |
 |---|---|---|
 | `t_school` | 学校 | name, short_name, goods_count（冗余） |
-| `t_user` | 用户 | openid(唯一), school_id, credit_score, success_count, contact_* |
+| `t_user` | 用户 | openid(唯一), school_id, credit_score, success_count, contact_*, role, certified |
 | `t_goods` | 商品 | seller_id, school_id, price, images(JSON), status, views, want_count |
 | `t_review` | 商品评价 | goods_id, order_id(唯一), rate 1-5, content |
 | `t_order` | 订单（核心） | status, price, expire_time, appeal_end_time, fee_billed |
 | `t_conversation` | 会话 | goods_id, buyer_id, seller_id, last_message, unread_for(JSON) |
 | `t_message` | 聊天消息 | conversation_id, from_user_id, content |
 | `t_fee_bill` | 手续费账单 | order_id(唯一), rate, amount, status(UNPAID/PAID) |
+| `t_certification` | 校园认证 | user_id(唯一), real_name, gender, student_no, student_card_image, status(PENDING/APPROVED/REJECTED), reject_reason |
 
 约定：
+- 校园认证一人一条记录，驳回后重新提交覆盖原记录；通过时冗余更新 t_user.certified=1
+- t_user.role 区分普通用户(USER)与管理员(ADMIN)，管理员方可访问 /certification/admin/**
 - 业务时间戳统一 `BIGINT` 毫秒（与前端 number 契约一致）
 - 逻辑删除 `deleted` 字段，MyBatis-Plus `@TableLogic`
 - `condition` 为 MySQL 保留字，实体中已反引号转义
@@ -177,7 +180,7 @@ PENDING_SELLER(待卖家确认) ──卖家确认──▶ PENDING_OFFLINE(待�
 - 拦截器从 header `token` 解析 userId，写入 `UserContext`（ThreadLocal，请求结束清理防串号）
 - 白名单：`/auth/**`、`/school/list`、`/error`、`/v3/api-docs/**`、`/swagger-ui/**`
 
-## 7. 接口清单（28 个，Swagger 可交互调试）
+## 7. 接口清单（33 个，Swagger 可交互调试）
 
 ### 认证
 | 方法 | 路径 | 说明 |
@@ -234,6 +237,17 @@ PENDING_SELLER(待卖家确认) ──卖家确认──▶ PENDING_OFFLINE(待�
 |---|---|---|
 | POST | /user/profile | 更新个人资料（微信授权头像/昵称、联系方式） |
 | GET | /user/detail/{id} | 用户主页（资料 + 在售商品 + 收到的评价） |
+
+### 校园认证
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | /certification/upload | 上传学生证照片（multipart，返回可访问 URL） |
+| POST | /certification/apply | 提交认证申请（姓名/性别/学号/学生证照片；驳回后可重新提交） |
+| GET | /certification/status | 我的认证状态（未申请 status=NONE，已驳回返回 rejectReason） |
+| GET | /certification/admin/list | 后台：认证申请列表（管理员；status 筛选 + 分页） |
+| POST | /certification/admin/review | 后台：审核通过/不通过（管理员；不通过需填 reason） |
+
+> 管理员需将 t_user.role 置为 ADMIN（手工 SQL），后台接口对普通用户返回 403。
 
 > 除白名单外全部接口需请求头 `token: <jwt>`，响应 401 时前端应跳登录。
 

@@ -16,7 +16,7 @@
 set -e
 
 # 必须是服务端端口 8848（Nacos 3.x 控制台是 8080，两者不是一回事）
-NACOS_SERVER_ADDR="${NACOS_SERVER_ADDR:-127.0.0.1:8848}"
+NACOS_SERVER_ADDR="${NACOS_SERVER_ADDR:-127.0.0.1:8080}"
 NACOS_USERNAME="${NACOS_USERNAME:-nacos}"
 NACOS_PASSWORD="${NACOS_PASSWORD:-nacos}"
 # 显式用 public；与客户端 namespace 留空等价（留空即 public）

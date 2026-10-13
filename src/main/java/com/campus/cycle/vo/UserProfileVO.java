@@ -22,6 +22,9 @@ public class UserProfileVO {
     /** 成功交易笔数（首单免手续费判断依据） */
     private Integer successCount;
 
+    /** 校园认证 0-未认证 1-已认证（徽章展示） */
+    private Integer certified;
+
     /** 站内联系方式 */
     private ContactVO contact;
 }
